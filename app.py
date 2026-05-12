@@ -147,6 +147,30 @@ SUCCESS BOX
 
     border-left: 5px solid #00FFAA;
 }
+            
+/* =========================
+FIX FEATURE TABLE WIDTH
+========================= */
+
+[data-testid="stDataFrame"] table {
+    width: auto !important;
+}
+
+[data-testid="stDataFrame"] td:nth-child(1),
+[data-testid="stDataFrame"] th:nth-child(1) {
+    width: 70px !important;
+    text-align: center !important;
+}
+
+[data-testid="stDataFrame"] td:nth-child(2),
+[data-testid="stDataFrame"] th:nth-child(2) {
+    text-align: center !important;
+}
+
+[data-testid="stDataFrame"] td:nth-child(3),
+[data-testid="stDataFrame"] th:nth-child(3) {
+    text-align: center !important;
+}
 
 /* =========================
 DATAFRAME
@@ -159,6 +183,26 @@ DATAFRAME
     overflow: hidden;
 
     border: 1px solid rgba(255,255,255,0.1);
+
+    font-size: 17px;
+}
+
+/* Center table data */
+
+[data-testid="stDataFrame"] td {
+    text-align: center !important;
+}
+
+/* Center headers */
+
+[data-testid="stDataFrame"] th {
+    text-align: center !important;
+}
+
+/* Center column names */
+
+thead tr th div {
+    justify-content: center !important;
 }
 
 /* =========================
@@ -166,6 +210,8 @@ METRIC STYLE
 ========================= */
 
 [data-testid="metric-container"] {
+            
+    text-align: center !important;
 
     background-color: rgba(255,255,255,0.05);
 
@@ -355,9 +401,7 @@ if uploaded_file is not None:
     st.write("Uploaded File:", uploaded_file.name)
 
     signal = data.iloc[:,0].values
-    st.write("Signal Mean:", np.mean(signal))
-    st.write("Signal Std:", np.std(signal))
-
+    
     # preprocess
     signal = signal - np.mean(signal)
 
@@ -409,7 +453,32 @@ if uploaded_file is not None:
     # SIGNAL PLOT
     # =========================
 
+   # =========================
+# SIGNAL WINDOW SLIDER
+# =========================
+
+    st.subheader("🎛 Select Signal Window")
+
+    window_size = 10000
+
+    start = st.slider(
+        "Select Starting Sample",
+        0,
+        len(signal) - window_size,
+        0
+    )
+
+    selected_signal = signal[start:start + window_size]
+
+    # =========================
+    # PLOTS
+    # =========================
+
     col1, col2 = st.columns(2)
+
+    # =========================
+    # TIME DOMAIN SIGNAL
+    # =========================
 
     with col1:
 
@@ -417,7 +486,7 @@ if uploaded_file is not None:
 
         fig, ax = plt.subplots(figsize=(7,4))
 
-        ax.plot(signal[:3000])
+        ax.plot(selected_signal)
 
         ax.set_xlabel("Samples")
         ax.set_ylabel("Amplitude")
@@ -425,55 +494,96 @@ if uploaded_file is not None:
         st.pyplot(fig)
 
     # =========================
-    # FFT PLOT
+    # FFT SPECTRUM
     # =========================
 
     with col2:
 
         st.subheader("📊 FFT Spectrum")
 
-        fft_signal = np.abs(fft(signal[:3000]))
+        fft_signal = np.abs(fft(selected_signal))
 
         fig2, ax2 = plt.subplots(figsize=(7,4))
 
-        ax2.plot(fft_signal[:1000])
+        ax2.plot(fft_signal[:2000])
 
         ax2.set_xlabel("Frequency Bin")
         ax2.set_ylabel("Magnitude")
 
         st.pyplot(fig2)
-
-    # =========================
-    # FEATURE TABLE
-    # =========================
+  
+  # =========================
+# FEATURE TABLE
+# =========================
 
     st.subheader("🧠 Extracted Features")
 
     feature_names = [
+        "RMS",
+        "Kurtosis",
+        "Crest Factor",
+        "Skewness",
+        "Band Energy 1",
+        "Band Energy 2",
+        "Band Energy 3",
+        "Spectral Centroid",
+        "FFT Peak 1",
+        "FFT Peak 2",
+        "FFT Peak 3"
+    ]
 
-    "RMS",
-    "Kurtosis",
-    "Crest Factor",
-    "Skewness",
+    values = np.round(features.flatten(), 4)
 
-    "Band Energy 1",
-    "Band Energy 2",
-    "Band Energy 3",
+    rows = ""
 
-    "Spectral Centroid",
+    for i, (fname, val) in enumerate(zip(feature_names, values), start=1):
 
-    "FFT Peak 1",
-    "FFT Peak 2",
-    "FFT Peak 3"
-]
+        rows += (
+            "<tr style='border-bottom:1px solid rgba(255,255,255,0.1);'>"
+            f"<td style='padding:12px; text-align:center;'>{i}</td>"
+            f"<td style='padding:12px; text-align:center;'>{fname}</td>"
+            f"<td style='padding:12px; text-align:center;'>{val}</td>"
+            "</tr>"
+        )
 
-    feat_df = pd.DataFrame({
-        "Feature": feature_names,
-        "Value": features.flatten()
-    })
+    html_table = f"""
+    <div style="display:flex; justify-content:center;">
 
-    st.dataframe(feat_df)
+    <table style="
+    width:85%;
+    border-collapse:collapse;
+    background-color:rgba(255,255,255,0.03);
+    border-radius:15px;
+    overflow:hidden;
+    text-align:center;
+    ">
 
+    <thead>
+
+    <tr style="background-color:rgba(255,255,255,0.05);">
+
+    <th style="padding:12px; width:10%;">No.</th>
+
+    <th style="padding:12px; width:50%;">Feature</th>
+
+    <th style="padding:12px; width:40%;">Value</th>
+
+    </tr>
+
+    </thead>
+
+    <tbody>
+
+    {rows}
+
+    </tbody>
+
+    </table>
+
+    </div>
+    """
+
+    st.markdown(html_table, unsafe_allow_html=True)
 # =========================
 # FOOTER
 
